@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "commonjs"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+// Users Collection
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userName  String   @unique
+  password  String
+  email     String?  @unique
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Conversations Collection
+model Conversation {
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  type         ConversationType
+  name         String?
+  participants Participant[]
+  metadata     ConversationMetadata?
+  lastMessage  ConversationLastMessage?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([participants.userId])
+  @@map("conversations")
+}
+
+// Messages Collection (sharded by conversationId)
+model Message {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String           @db.ObjectId
+  senderId       String           @db.ObjectId
+  content        String
+  type           MessageType      @default(TEXT)
+  parentMessageId String?         @db.ObjectId
+  attachments    Attachment[]
+  reactions      Reaction[]
+  deliveryStatus DeliveryStatus[]
+  isEdited       Boolean          @default(false)
+  editedAt       DateTime?
+  createdAt      DateTime         @default(now())
+  deletedAt      DateTime?
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@index([content])
+  @@map("messages")
+}
+
+// Composite Types for Conversation
+type Participant {
+  userId            String   @db.ObjectId
+  role              ParticipantRole
+  joinedAt          DateTime @default(now())
+  leftAt            DateTime?
+  lastReadMessageId String?  @db.ObjectId
+  isMuted           Boolean  @default(false)
+}
+
+type ConversationMetadata {
+  avatar      String? 
+  description String?
+  createdBy   String  @db.ObjectId
+}
+
+type ConversationLastMessage {
+  id        String   @db.ObjectId
+  content   String
+  senderId  String   @db.ObjectId
+  createdAt DateTime
+}
+
+// Composite Types for Message
+type Attachment {
+  url  String
+  type String
+  size Int
+  name String
+}
+
+type Reaction {
+  userId    String   @db.ObjectId
+  type      String
+  createdAt DateTime @default(now())
+}
+
+type DeliveryStatus {
+  userId    String           @db.ObjectId
+  status    DeliveryStatusType
+  timestamp DateTime         @default(now())
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum ParticipantRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+}
+
+enum DeliveryStatusType {
+  SENT
+  DELIVERED
+  READ
+}

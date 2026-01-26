@@ -9,7 +9,9 @@ export class ProfileController {
 
   @Post()
   create(@Body() createProfileDto: CreateProfileDto) {
-    return this.profileService.create(createProfileDto);
+
+    console.log("profile: " , createProfileDto);
+    return null; 
   }
 
   @Get()
