@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { AppLogger } from './config/logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppLogger } from './config/logger';
 
 async function bootstrap() {
   const port = process.env.PORT || 4000;
