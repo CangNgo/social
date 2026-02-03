@@ -3,14 +3,29 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppLogger } from './config/logger';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 
-async function bootstrap() {
-  const port = process.env.PORT || 4000;
+// Create Express instance for Vercel
+const server = express();
+let cachedApp;
+
+async function createApp() {
+  if (cachedApp) {
+    return cachedApp;
+  }
+
+  const adapter = new ExpressAdapter(server);
+  const app = await NestFactory.create(AppModule, adapter);
+
+  // Enable CORS
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   const prefix = process.env.PREFIX || 'api';
   const apiDocs = process.env.API_DOCS || 'api-docs';
-  Logger.log(`🚀 Application is running on: http://localhost:${port}`, 'Bootstrap');
-
-  const app = await NestFactory.create(AppModule)
 
   // Set global prefix before Swagger setup
   app.setGlobalPrefix(prefix);
@@ -49,7 +64,28 @@ async function bootstrap() {
 
   app.useLogger(new AppLogger());
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(port);
 
+  await app.init();
+  cachedApp = app;
+  return app;
 }
-bootstrap();
+
+// For local development
+async function bootstrap() {
+  const port = process.env.PORT || 4000;
+  Logger.log(`🚀 Application is running on: http://localhost:${port}`, 'Bootstrap');
+
+  const app = await createApp();
+  await app.listen(port);
+}
+
+// Export for Vercel serverless
+export default async (req, res) => {
+  await createApp();
+  return server(req, res);
+};
+
+// Start local server if not in serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  bootstrap();
+}
