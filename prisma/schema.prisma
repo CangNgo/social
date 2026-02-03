@@ -5,13 +5,12 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../generated/prisma"
-  moduleFormat = "commonjs"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 // Users Collection
@@ -20,6 +19,7 @@ model User {
   userName  String   @unique
   password  String
   email     String?  @unique
+  profile   Profile
   role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -29,14 +29,14 @@ model User {
 
 // Conversations Collection
 model Conversation {
-  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  id           String                   @id @default(auto()) @map("_id") @db.ObjectId
   type         ConversationType
   name         String?
   participants Participant[]
   metadata     ConversationMetadata?
   lastMessage  ConversationLastMessage?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
 
   @@index([participants.userId])
   @@map("conversations")
@@ -44,19 +44,19 @@ model Conversation {
 
 // Messages Collection (sharded by conversationId)
 model Message {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  conversationId String           @db.ObjectId
-  senderId       String           @db.ObjectId
-  content        String
-  type           MessageType      @default(TEXT)
-  parentMessageId String?         @db.ObjectId
-  attachments    Attachment[]
-  reactions      Reaction[]
-  deliveryStatus DeliveryStatus[]
-  isEdited       Boolean          @default(false)
-  editedAt       DateTime?
-  createdAt      DateTime         @default(now())
-  deletedAt      DateTime?
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId  String           @db.ObjectId
+  senderId        String           @db.ObjectId
+  content         String
+  type            MessageType      @default(TEXT)
+  parentMessageId String?          @db.ObjectId
+  attachments     Attachment[]
+  reactions       Reaction[]
+  deliveryStatus  DeliveryStatus[]
+  isEdited        Boolean          @default(false)
+  editedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  deletedAt       DateTime?
 
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([senderId])
@@ -66,16 +66,16 @@ model Message {
 
 // Composite Types for Conversation
 type Participant {
-  userId            String   @db.ObjectId
+  userId            String          @db.ObjectId
   role              ParticipantRole
-  joinedAt          DateTime @default(now())
+  joinedAt          DateTime        @default(now())
   leftAt            DateTime?
-  lastReadMessageId String?  @db.ObjectId
-  isMuted           Boolean  @default(false)
+  lastReadMessageId String?         @db.ObjectId
+  isMuted           Boolean         @default(false)
 }
 
 type ConversationMetadata {
-  avatar      String? 
+  avatar      String?
   description String?
   createdBy   String  @db.ObjectId
 }
@@ -102,9 +102,28 @@ type Reaction {
 }
 
 type DeliveryStatus {
-  userId    String           @db.ObjectId
+  userId    String             @db.ObjectId
   status    DeliveryStatusType
-  timestamp DateTime         @default(now())
+  timestamp DateTime           @default(now())
+}
+
+type Profile {
+  firstName   String?
+  lastName    String?
+  displayName String?
+  gender      Boolean?
+  bio         String?
+  avatar      String?
+  address     String?
+  phone       String?
+  follow      follow[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+type follow {
+  follower  String[] @default([])
+  following String[] @default([])
 }
 
 // Enums
